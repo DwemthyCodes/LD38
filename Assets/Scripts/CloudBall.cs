@@ -11,7 +11,6 @@ public class CloudBall : MonoBehaviour {
     private Vector3 velocity;
     private bool raining = false;
     private bool settled = false;
-    private bool spreadExhausted = false;
     private float rainElapsed = 0f;
 
     void Start () {
@@ -36,38 +35,34 @@ public class CloudBall : MonoBehaviour {
 
         if(raining)
         {
-            if (spreadExhausted)
+            rainElapsed += Time.deltaTime;
+            if (rainElapsed >= rainRate)
             {
-                float scale = transform.localScale.x - rainRate * Time.deltaTime;
-                if(scale > 0.1)
+                bool spread = false;
+                Collider[] colliders = Physics.OverlapSphere(transform.position, transform.localScale.x * 0.5f);
+                for (int i = 0; i < colliders.Length; i++)
                 {
-                    transform.localScale = new Vector3(scale, scale, scale);
-                }
-                else
-                {
-                    Destroy(transform.gameObject);
-                }
-            }
-            else
-            {
-                rainElapsed += Time.deltaTime;
-                if (rainElapsed >= rainRate)
-                {
-                    rainElapsed = 0f;
-                    bool spread = false;
-                    Collider[] colliders = Physics.OverlapSphere(transform.position, transform.localScale.x * 0.5f);
-                    for (int i = 0; i < colliders.Length; i++)
+                    CloudBall target = colliders[i].GetComponent<CloudBall>();
+                    if (target != null && !target.isRaining())
                     {
-                        CloudBall target = colliders[i].GetComponent<CloudBall>();
-                        if (target != null && !target.isRaining())
-                        {
-                            spread = true;
-                            target.Rain();
-                            break;
-                        }
+                        spread = true;
+                        rainElapsed = 0f;
+                        target.Rain();
+                        break;
                     }
-
-                    spreadExhausted = !spread;
+                }
+                
+                if (!spread)
+                {
+                    float scale = transform.localScale.x - rainRate * Time.deltaTime;
+                    if (scale > 0.1)
+                    {
+                        transform.localScale = new Vector3(scale, scale, scale);
+                    }
+                    else
+                    {
+                        Destroy(transform.gameObject);
+                    }
                 }
             }
         }
