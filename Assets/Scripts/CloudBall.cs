@@ -5,6 +5,7 @@ public class CloudBall : MonoBehaviour {
     public Transform planet;
     public float gravityForce = 5f;
     public float rainRate = 1f;
+    public GameObject rainSystem;
 
     private Rigidbody rigiBod;
     private Vector3 velocity;
@@ -16,18 +17,24 @@ public class CloudBall : MonoBehaviour {
     void Start () {
         rigiBod = GetComponent<Rigidbody>();
         rigiBod.velocity = velocity;
+        rainSystem.SetActive(false);
 	}
 	
 	void FixedUpdate () {
-	    if(rigiBod != null && planet != null)
+	    if(planet != null)
         {
             Vector3 gravityDirection = planet.transform.position - transform.position;
             gravityDirection.Normalize();
 
-            rigiBod.velocity += gravityDirection * gravityForce * Time.deltaTime;
+            if(rigiBod != null)
+            {
+                rigiBod.velocity += gravityDirection * gravityForce * Time.deltaTime;
+            }
+
+            transform.up = -gravityDirection;
         }
 
-        if(raining && settled)
+        if(raining)
         {
             if (spreadExhausted)
             {
@@ -74,6 +81,19 @@ public class CloudBall : MonoBehaviour {
         {
             renderer.material.color = Color.gray;
         }
+
+        if (settled)
+        {
+            rainSystem.SetActive(true);
+        }
+        else
+        {
+            ParticleSystem cloudParticles = GetComponent<ParticleSystem>();
+            if (cloudParticles != null)
+            {
+                cloudParticles.startColor = Color.blue;
+            }
+        }
     }
 
     public bool isRaining()
@@ -104,6 +124,16 @@ public class CloudBall : MonoBehaviour {
             }
             rigiBod = null;
             settled = true;
+            ParticleSystem cloudParticles = GetComponent<ParticleSystem>();
+            if (cloudParticles != null)
+            {
+                cloudParticles.Stop();
+            }
+
+            if (raining)
+            {
+                rainSystem.SetActive(true);
+            }
         }
         else if (other.transform.root.tag == "Planet")
         {

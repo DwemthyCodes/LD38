@@ -103,16 +103,21 @@ public class CloudLauncher : MonoBehaviour {
     public float lookSpeed = 30;
     public bool invertLook = true;
     public Transform head;
-    public float cameraMaxDistance = 5f;
-    public float cameraDistanceBuffer = 0.1f;
-    public LayerMask wallCollisionLayers;
-    public float lookMax = 10;
+    public float lookMax = 80;
+    public float lookMin = -45;
+    public float zoomMin = -10f;
+    public float zoomMax = 0f;
     
     void FixedUpdate()
     {
         if (Input.GetMouseButton(1))
         {
-            float yRotate = Input.GetAxis("Mouse X") * lookSpeed * Time.deltaTime;
+            float yRotate = Input.GetAxis("Mouse X") * lookSpeed;// * Time.deltaTime;
+
+            if (invertLook)
+            {
+                yRotate = -yRotate;
+            }
 
             Vector3 targetForward = transform.forward;
             targetForward = Quaternion.AngleAxis(yRotate, transform.up) * targetForward;
@@ -121,47 +126,43 @@ public class CloudLauncher : MonoBehaviour {
             transform.rotation = Quaternion.LookRotation(targetForward, transform.up);
             
             float xRotate = Input.GetAxis("Mouse Y");
-            // if (invertLook)
-            // {
-            //    xRotate *= -1;
-            // }
 
-            Vector3 eulerAngles = Camera.main.transform.eulerAngles;
-            eulerAngles.x += xRotate * lookSpeed * Time.deltaTime;
-            Camera.main.transform.eulerAngles = eulerAngles;
+            Vector3 headEulers = head.localEulerAngles;
+            headEulers.x += xRotate * lookSpeed;// * Time.deltaTime;
 
+            if(headEulers.x > lookMax)
+            {
+                if(headEulers.x > 180)
+                {
+                    headEulers.x -= 360;
+                    if (headEulers.x < lookMin)
+                    {
+                        headEulers.x = lookMin;
+                    }
+                }
+                else
+                {
+                    headEulers.x = lookMax;
+                }
+            }
 
-            Vector3 cameraRight = Camera.main.transform.right;
-            Vector3 targetCamForward = Camera.main.transform.forward;
-            targetCamForward = Quaternion.AngleAxis(xRotate, cameraRight) * targetCamForward;
-
-            Vector3 targetUp = Vector3.Cross(cameraRight, targetCamForward);
-            //Camera.main.transform.rotation = Quaternion.LookRotation(targetCamForward, targetUp);
-
+            head.localEulerAngles = headEulers;
         }
-        
-       // 
-    //
-    //    limitCameraPosition();
-    }
 
-    void limitCameraPosition()
-    {
-        Vector3 headPos = head.position;
-        Vector3 camPos = Camera.main.transform.position;
-        Vector3 headToCam = camPos - headPos;
-
-        RaycastHit hitInfo;
-        if (Physics.Raycast(headPos, headToCam, out hitInfo, cameraMaxDistance, wallCollisionLayers))
+        float scroll = Input.GetAxis("Mouse ScrollWheel");
+        if (scroll > 0f || scroll < 0f)
         {
-            camPos = hitInfo.point - (headToCam.normalized * cameraDistanceBuffer);
+            Vector3 camPos = Camera.main.transform.localPosition;
+            camPos.z += scroll * lookSpeed;
+            if(camPos.z > zoomMax)
+            {
+                camPos.z = zoomMax;
+            }else if(camPos.z < zoomMin)
+            {
+                camPos.z = zoomMin;
+            }
+            Camera.main.transform.localPosition = camPos;
         }
-        else
-        {
-            camPos = headPos + (headToCam.normalized * cameraMaxDistance);
-        }
-
-        Camera.main.transform.position = camPos;
     }
 
     private Vector3 AlignForwardToUp(Vector3 forward, Vector3 up)
