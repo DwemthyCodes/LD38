@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.SceneManagement;
 using System.Collections;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -14,6 +15,7 @@ public class OrbitalGravity : MonoBehaviour {
     private Rigidbody rigiBod;
 
     private Vector3 gravity;
+    private Vector3 momentum;
     private bool jumping;
     
 	void Start () {
@@ -21,35 +23,40 @@ public class OrbitalGravity : MonoBehaviour {
         gravity = planet.transform.position - transform.position;
         gravity.Normalize();
     }
-	
-	void FixedUpdate () {
+
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.green;
+        Gizmos.DrawSphere(foot.position, transform.localScale.x * 0.55f);
+    }
+
+    void FixedUpdate () {
         Vector3 velocity = new Vector3();
         Orbiter orbiter = null;
         bool grounded = false;
 
-        Collider[] colliders = Physics.OverlapSphere(foot.position, 0.01f);
+        Vector3 targetUp = transform.up;
+
+        Collider[] colliders = Physics.OverlapSphere(foot.position, transform.localScale.x * 0.6f);
         for(int i=0; i<colliders.Length; i++)
         {
-            grounded = true;
             orbiter = colliders[i].transform.root.GetComponent<Orbiter>();
             if(orbiter != null)
             {
+                grounded = true;
                 break;
+            }else if (colliders[i].transform.tag.Equals("Planet"))
+            {
+                Scene scene = SceneManager.GetActiveScene();
+                SceneManager.LoadScene(scene.name);
+                //Application.LoadLevel(Application.loadedLevel);
             }
         }
+        
+        Vector3 toPlanet = planet.transform.position - transform.position;
+        toPlanet.Normalize();
+        targetUp = -toPlanet;
 
-        Vector3 targetUp = transform.up;
-
-        if(orbiter != null)
-        {
-            targetUp = orbiter.transform.up;
-        }
-        else
-        {
-            Vector3 toPlanet = planet.transform.position - transform.position;
-            toPlanet.Normalize();
-            targetUp = -toPlanet;
-        }
         if (jumping)
         {
             Vector3 jumpDecay = -targetUp * Time.deltaTime * gravityForce * 2;
@@ -58,9 +65,13 @@ public class OrbitalGravity : MonoBehaviour {
                 gravity = -targetUp * gravityForce;
                 jumping = false;
             }
-        }else
+        }else if(!grounded)
         {
             gravity = -targetUp * gravityForce;
+        }
+        else
+        {
+            gravity = new Vector3();
         }
 
         if(grounded && Input.GetKeyDown(KeyCode.Space))
@@ -71,16 +82,19 @@ public class OrbitalGravity : MonoBehaviour {
 
         if (orbiter != null)
         {
-            Vector3 orbiterVelocity = orbiter.transform.forward * orbiter.speed * 0.5f * Time.deltaTime;
-            orbiterVelocity = transform.InverseTransformVector(orbiterVelocity);
-            
-            transform.Translate(orbiterVelocity);
+            momentum = orbiter.transform.forward * orbiter.speed;// * 0.5f;
+            //momentum = transform.InverseTransformVector(momentum);
+            Vector3 toMove = momentum * Time.deltaTime;
+            //transform.Translate(toMove);
         }
 
         Vector3 targetForward = HandleOrientationInput(targetUp);
         targetForward = AlignForwardToUp(targetForward, targetUp);
         transform.rotation = Quaternion.LookRotation(targetForward, targetUp);
-
+        
+        Debug.Log("Momentum is " + momentum);
+        velocity += momentum;
+        Debug.Log("Gravity is " + gravity);
         velocity += gravity;
         velocity += HandleVelocityInput();
 
