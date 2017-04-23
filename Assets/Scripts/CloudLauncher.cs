@@ -91,25 +91,82 @@ public class CloudLauncher : MonoBehaviour {
                 float newScale = currentScale + (chargeRate * Time.deltaTime);
                 currentShot.transform.localScale = new Vector3(newScale, newScale, newScale);
             }
+            else
+            {
+                currentShot.Rain();
+            }
 
             currentShot.transform.position = CalcSpawnPosition();
         }
-
-        if (Input.GetMouseButtonUp(1))
-        {
-            RaycastHit hit;
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out hit, dist, aimMask))
-            {
-                if(hit.transform != null)
-                {
-                    CloudBall ball = hit.transform.gameObject.GetComponent<CloudBall>();
-                    if(ball != null)
-                    {
-                        Destroy(ball.gameObject);
-                    }
-                }
-            }
-        }
 	}
+
+    public float lookSpeed = 30;
+    public bool invertLook = true;
+    public Transform head;
+    public float cameraMaxDistance = 5f;
+    public float cameraDistanceBuffer = 0.1f;
+    public LayerMask wallCollisionLayers;
+    public float lookMax = 10;
+    
+    void FixedUpdate()
+    {
+        if (Input.GetMouseButton(1))
+        {
+            float yRotate = Input.GetAxis("Mouse X") * lookSpeed * Time.deltaTime;
+
+            Vector3 targetForward = transform.forward;
+            targetForward = Quaternion.AngleAxis(yRotate, transform.up) * targetForward;
+
+            targetForward = AlignForwardToUp(targetForward, transform.up);
+            transform.rotation = Quaternion.LookRotation(targetForward, transform.up);
+            
+            float xRotate = Input.GetAxis("Mouse Y");
+            // if (invertLook)
+            // {
+            //    xRotate *= -1;
+            // }
+
+            Vector3 eulerAngles = Camera.main.transform.eulerAngles;
+            eulerAngles.x += xRotate * lookSpeed * Time.deltaTime;
+            Camera.main.transform.eulerAngles = eulerAngles;
+
+
+            Vector3 cameraRight = Camera.main.transform.right;
+            Vector3 targetCamForward = Camera.main.transform.forward;
+            targetCamForward = Quaternion.AngleAxis(xRotate, cameraRight) * targetCamForward;
+
+            Vector3 targetUp = Vector3.Cross(cameraRight, targetCamForward);
+            //Camera.main.transform.rotation = Quaternion.LookRotation(targetCamForward, targetUp);
+
+        }
+        
+       // 
+    //
+    //    limitCameraPosition();
+    }
+
+    void limitCameraPosition()
+    {
+        Vector3 headPos = head.position;
+        Vector3 camPos = Camera.main.transform.position;
+        Vector3 headToCam = camPos - headPos;
+
+        RaycastHit hitInfo;
+        if (Physics.Raycast(headPos, headToCam, out hitInfo, cameraMaxDistance, wallCollisionLayers))
+        {
+            camPos = hitInfo.point - (headToCam.normalized * cameraDistanceBuffer);
+        }
+        else
+        {
+            camPos = headPos + (headToCam.normalized * cameraMaxDistance);
+        }
+
+        Camera.main.transform.position = camPos;
+    }
+
+    private Vector3 AlignForwardToUp(Vector3 forward, Vector3 up)
+    {
+        Vector3 right = Vector3.Cross(forward, up);
+        return Vector3.Cross(up, right);
+    }
 }

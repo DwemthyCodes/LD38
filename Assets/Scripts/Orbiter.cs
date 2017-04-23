@@ -5,14 +5,8 @@ public class Orbiter : MonoBehaviour {
     public Transform planet;
     public float radius = 35;
     public float speed = 3f;
-
-	// Use this for initialization
-	void Start () {
 	
-	}
-	
-	// Update is called once per frame
-	void Update () {
+	void FixedUpdate () {
         if(planet != null)
         {
             //Move forward

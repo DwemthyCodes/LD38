@@ -4,7 +4,6 @@ using System.Collections;
 
 [RequireComponent(typeof(Rigidbody))]
 public class OrbitalGravity : MonoBehaviour {
-    //TODO find ground, when on ground add the ground's forward to velocity
     public Transform planet;
     public Transform foot;
     public float speed = 5f;
@@ -37,7 +36,7 @@ public class OrbitalGravity : MonoBehaviour {
 
         Vector3 targetUp = transform.up;
 
-        Collider[] colliders = Physics.OverlapSphere(foot.position, transform.localScale.x * 0.6f);
+        Collider[] colliders = Physics.OverlapSphere(foot.position, transform.localScale.x * 0.7f);
         for(int i=0; i<colliders.Length; i++)
         {
             orbiter = colliders[i].transform.root.GetComponent<Orbiter>();
@@ -49,7 +48,6 @@ public class OrbitalGravity : MonoBehaviour {
             {
                 Scene scene = SceneManager.GetActiveScene();
                 SceneManager.LoadScene(scene.name);
-                //Application.LoadLevel(Application.loadedLevel);
             }
         }
         
@@ -74,7 +72,7 @@ public class OrbitalGravity : MonoBehaviour {
             gravity = new Vector3();
         }
 
-        if(grounded && Input.GetKeyDown(KeyCode.Space))
+        if(grounded && Input.GetKey(KeyCode.Space))
         {
             jumping = true;
             gravity = targetUp * jumpForce;
@@ -82,19 +80,15 @@ public class OrbitalGravity : MonoBehaviour {
 
         if (orbiter != null)
         {
-            momentum = orbiter.transform.forward * orbiter.speed;// * 0.5f;
-            //momentum = transform.InverseTransformVector(momentum);
+            momentum = orbiter.transform.forward * orbiter.speed;
             Vector3 toMove = momentum * Time.deltaTime;
-            //transform.Translate(toMove);
         }
 
         Vector3 targetForward = HandleOrientationInput(targetUp);
         targetForward = AlignForwardToUp(targetForward, targetUp);
         transform.rotation = Quaternion.LookRotation(targetForward, targetUp);
         
-        Debug.Log("Momentum is " + momentum);
         velocity += momentum;
-        Debug.Log("Gravity is " + gravity);
         velocity += gravity;
         velocity += HandleVelocityInput();
 
