@@ -12,6 +12,7 @@ public class CloudLauncher : MonoBehaviour {
     public LayerMask cloudMask;
     public Transform leftArm;
     public Transform rightArm;
+    public AudioSource shootSound;
 
     private Transform planet;
     private Vector3 spawnHome;
@@ -30,73 +31,80 @@ public class CloudLauncher : MonoBehaviour {
     }
 
     void Update () {
-        if (Input.GetMouseButtonDown(0))
+        if (!PauseController.Paused)
         {
-            currentShot = Instantiate(cloudPrefab);
-            currentShot.transform.position = CalcSpawnPosition();
-            currentShot.gameObject.layer = 9;
+            if (Input.GetMouseButtonDown(0))
+            {
+                currentShot = Instantiate(cloudPrefab);
+                currentShot.transform.position = CalcSpawnPosition();
+                currentShot.gameObject.layer = 9;
 
-            if (rightArm != null)
-            {
-                rightArm.Translate(0f, 0.5f, 0f);
-                rightArm.Rotate(0f, 0f, -15f);
-            }
+                if (rightArm != null)
+                {
+                    rightArm.Translate(0f, 0.5f, 0f);
+                    rightArm.Rotate(0f, 0f, -15f);
+                }
 
-            if(leftArm != null)
-            {
-                leftArm.Translate(0f, 0.5f, 0f);
-                leftArm.Rotate(0f, 0f, 15f);
+                if (leftArm != null)
+                {
+                    leftArm.Translate(0f, 0.5f, 0f);
+                    leftArm.Rotate(0f, 0f, 15f);
+                }
             }
-        }
-        else if (Input.GetMouseButtonUp(0) && currentShot != null)
-        {
-            Vector3 aim;
-            RaycastHit hit;
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out hit, dist, aimMask))
+            else if (Input.GetMouseButtonUp(0) && currentShot != null)
             {
-                aim = hit.point;
-            }
-            else
-            {
-                aim = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10 * dist));
-            }
+                Vector3 aim;
+                RaycastHit hit;
+                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                if (Physics.Raycast(ray, out hit, dist, aimMask))
+                {
+                    aim = hit.point;
+                }
+                else
+                {
+                    aim = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10 * dist));
+                }
 
-            Vector3 launchV = aim - currentShot.transform.position;
-            launchV.Normalize();
-            launchV *= Mathf.Max(launchForce, launchForce * currentShot.transform.localScale.x);
-            currentShot.SetVelocity(launchV);
-            currentShot.planet = planet;
-            currentShot.gameObject.layer = 8;
-            currentShot = null;
+                Vector3 launchV = aim - currentShot.transform.position;
+                launchV.Normalize();
+                launchV *= Mathf.Max(launchForce, launchForce * currentShot.transform.localScale.x);
+                currentShot.SetVelocity(launchV);
+                currentShot.planet = planet;
+                currentShot.gameObject.layer = 8;
+                currentShot = null;
 
+                if (shootSound != null && PauseController.SFXOn)
+                {
+                    shootSound.Play();
+                }
 
-            if (rightArm != null)
-            {
-                rightArm.Rotate(0f, 0f, 15f);
-                rightArm.Translate(0f, -0.5f, 0f);
-            }
+                if (rightArm != null)
+                {
+                    rightArm.Rotate(0f, 0f, 15f);
+                    rightArm.Translate(0f, -0.5f, 0f);
+                }
 
-            if (leftArm != null)
-            {
-                leftArm.Rotate(0f, 0f, -15f);
-                leftArm.Translate(0f, -0.5f, 0f);
+                if (leftArm != null)
+                {
+                    leftArm.Rotate(0f, 0f, -15f);
+                    leftArm.Translate(0f, -0.5f, 0f);
+                }
             }
-        }
-        else if (Input.GetMouseButton(0) && currentShot != null)
-        {
-            float currentScale = currentShot.transform.localScale.x;
-            if(currentScale < chargeMax)
+            else if (Input.GetMouseButton(0) && currentShot != null)
             {
-                float newScale = currentScale + (chargeRate * Time.deltaTime);
-                currentShot.transform.localScale = new Vector3(newScale, newScale, newScale);
-            }
-            else
-            {
-                currentShot.Rain();
-            }
+                float currentScale = currentShot.transform.localScale.x;
+                if (currentScale < chargeMax)
+                {
+                    float newScale = currentScale + (chargeRate * Time.deltaTime);
+                    currentShot.transform.localScale = new Vector3(newScale, newScale, newScale);
+                }
+                else
+                {
+                    currentShot.Rain();
+                }
 
-            currentShot.transform.position = CalcSpawnPosition();
+                currentShot.transform.position = CalcSpawnPosition();
+            }
         }
 	}
 
@@ -110,58 +118,63 @@ public class CloudLauncher : MonoBehaviour {
     
     void FixedUpdate()
     {
-        if (Input.GetMouseButton(1))
+        if (!PauseController.Paused)
         {
-            float yRotate = Input.GetAxis("Mouse X") * lookSpeed;// * Time.deltaTime;
-
-            if (invertLook)
+            if (Input.GetMouseButton(1))
             {
-                yRotate = -yRotate;
-            }
+                float yRotate = Input.GetAxis("Mouse X") * lookSpeed;// * Time.deltaTime;
 
-            Vector3 targetForward = transform.forward;
-            targetForward = Quaternion.AngleAxis(yRotate, transform.up) * targetForward;
 
-            targetForward = AlignForwardToUp(targetForward, transform.up);
-            transform.rotation = Quaternion.LookRotation(targetForward, transform.up);
-            
-            float xRotate = Input.GetAxis("Mouse Y");
+                Vector3 targetForward = transform.forward;
+                targetForward = Quaternion.AngleAxis(yRotate, transform.up) * targetForward;
 
-            Vector3 headEulers = head.localEulerAngles;
-            headEulers.x += xRotate * lookSpeed;// * Time.deltaTime;
+                targetForward = AlignForwardToUp(targetForward, transform.up);
+                transform.rotation = Quaternion.LookRotation(targetForward, transform.up);
 
-            if(headEulers.x > lookMax)
-            {
-                if(headEulers.x > 180)
+                float xRotate = Input.GetAxis("Mouse Y");
+
+                if (!invertLook)
                 {
-                    headEulers.x -= 360;
-                    if (headEulers.x < lookMin)
+                    xRotate = -xRotate;
+                }
+
+                Vector3 headEulers = head.localEulerAngles;
+                headEulers.x += xRotate * lookSpeed;// * Time.deltaTime;
+
+                if (headEulers.x > lookMax)
+                {
+                    if (headEulers.x > 180)
                     {
-                        headEulers.x = lookMin;
+                        headEulers.x -= 360;
+                        if (headEulers.x < lookMin)
+                        {
+                            headEulers.x = lookMin;
+                        }
+                    }
+                    else
+                    {
+                        headEulers.x = lookMax;
                     }
                 }
-                else
+
+                head.localEulerAngles = headEulers;
+            }
+
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (scroll > 0f || scroll < 0f)
+            {
+                Vector3 camPos = Camera.main.transform.localPosition;
+                camPos.z += scroll * lookSpeed;
+                if (camPos.z > zoomMax)
                 {
-                    headEulers.x = lookMax;
+                    camPos.z = zoomMax;
                 }
+                else if (camPos.z < zoomMin)
+                {
+                    camPos.z = zoomMin;
+                }
+                Camera.main.transform.localPosition = camPos;
             }
-
-            head.localEulerAngles = headEulers;
-        }
-
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if (scroll > 0f || scroll < 0f)
-        {
-            Vector3 camPos = Camera.main.transform.localPosition;
-            camPos.z += scroll * lookSpeed;
-            if(camPos.z > zoomMax)
-            {
-                camPos.z = zoomMax;
-            }else if(camPos.z < zoomMin)
-            {
-                camPos.z = zoomMin;
-            }
-            Camera.main.transform.localPosition = camPos;
         }
     }
 

@@ -7,7 +7,7 @@ public class Orbiter : MonoBehaviour {
     public float speed = 3f;
 	
 	void FixedUpdate () {
-        if(planet != null)
+        if(planet != null && !PauseController.Paused)
         {
             //Move forward
             Vector3 forward = transform.forward;

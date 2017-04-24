@@ -6,6 +6,8 @@ public class CloudBall : MonoBehaviour {
     public float gravityForce = 5f;
     public float rainRate = 1f;
     public GameObject rainSystem;
+    public AudioSource attachSound;
+    public AudioSource rainSound;
 
     private Rigidbody rigiBod;
     private Vector3 velocity;
@@ -20,48 +22,51 @@ public class CloudBall : MonoBehaviour {
 	}
 	
 	void FixedUpdate () {
-	    if(planet != null)
+        if (!PauseController.Paused)
         {
-            Vector3 gravityDirection = planet.transform.position - transform.position;
-            gravityDirection.Normalize();
-
-            if(rigiBod != null)
+            if (planet != null)
             {
-                rigiBod.velocity += gravityDirection * gravityForce * Time.deltaTime;
+                Vector3 gravityDirection = planet.transform.position - transform.position;
+                gravityDirection.Normalize();
+
+                if (rigiBod != null)
+                {
+                    rigiBod.velocity += gravityDirection * gravityForce * Time.deltaTime;
+                }
+
+                transform.up = -gravityDirection;
             }
 
-            transform.up = -gravityDirection;
-        }
-
-        if(raining)
-        {
-            rainElapsed += Time.deltaTime;
-            if (rainElapsed >= rainRate)
+            if (raining)
             {
-                bool spread = false;
-                Collider[] colliders = Physics.OverlapSphere(transform.position, transform.localScale.x * 0.5f);
-                for (int i = 0; i < colliders.Length; i++)
+                rainElapsed += Time.deltaTime;
+                if (rainElapsed >= rainRate)
                 {
-                    CloudBall target = colliders[i].GetComponent<CloudBall>();
-                    if (target != null && !target.isRaining())
+                    bool spread = false;
+                    Collider[] colliders = Physics.OverlapSphere(transform.position, transform.localScale.x * 0.5f);
+                    for (int i = 0; i < colliders.Length; i++)
                     {
-                        spread = true;
-                        rainElapsed = 0f;
-                        target.Rain();
-                        break;
+                        CloudBall target = colliders[i].GetComponent<CloudBall>();
+                        if (target != null && !target.isRaining())
+                        {
+                            spread = true;
+                            rainElapsed = 0f;
+                            target.Rain();
+                            break;
+                        }
                     }
-                }
-                
-                if (!spread)
-                {
-                    float scale = transform.localScale.x - rainRate * Time.deltaTime;
-                    if (scale > 0.1)
+
+                    if (!spread)
                     {
-                        transform.localScale = new Vector3(scale, scale, scale);
-                    }
-                    else
-                    {
-                        Destroy(transform.gameObject);
+                        float scale = transform.localScale.x - rainRate * Time.deltaTime;
+                        if (scale > 0.1)
+                        {
+                            transform.localScale = new Vector3(scale, scale, scale);
+                        }
+                        else
+                        {
+                            Destroy(transform.gameObject);
+                        }
                     }
                 }
             }
@@ -80,6 +85,10 @@ public class CloudBall : MonoBehaviour {
         if (settled)
         {
             rainSystem.SetActive(true);
+            if (rainSound != null && PauseController.SFXOn)
+            {
+                rainSound.Play();
+            }
         }
         else
         {
@@ -107,6 +116,10 @@ public class CloudBall : MonoBehaviour {
 
     private void OnTriggerStay(Collider other)
     {
+        if (PauseController.Paused)
+        {
+            return;
+        }
         if (other.transform.root.tag == "CloudSeed")
         {
             transform.parent = other.transform.root;
@@ -119,6 +132,10 @@ public class CloudBall : MonoBehaviour {
             }
             rigiBod = null;
             settled = true;
+            if(attachSound != null && PauseController.SFXOn)
+            {
+                attachSound.Play();
+            }
             ParticleSystem cloudParticles = GetComponent<ParticleSystem>();
             if (cloudParticles != null)
             {
@@ -128,6 +145,10 @@ public class CloudBall : MonoBehaviour {
             if (raining)
             {
                 rainSystem.SetActive(true);
+                if (rainSound != null)
+                {
+                    rainSound.Play();
+                }
             }
         }
         else if (other.transform.root.tag == "Planet")
